@@ -42,10 +42,10 @@ impl Expr {
 }
 
 pub enum ParseError {
-    Expected(tok: Option<char>, found: Option<char>),
+    Expected(Option<char>, Option<char>),
 }
 
-pub fn parse(input: &str) -> Result<Expr, String> {
+pub fn parse(input: &str) -> Result<Expr, ParseError> {
     let mut queue : VecDeque<char> = VecDeque::new();
     for chr in input.chars() {
         queue.push_back(chr);
@@ -57,7 +57,7 @@ pub fn parse(input: &str) -> Result<Expr, String> {
 }
 
 fn expect(queue: &mut VecDeque<char>, tok: Option<char>)
-    -> Result<(), String> {
+    -> Result<(), ParseError> {
     if let Some(&chr) = queue.front() {
         match tok {
             Some(val) => {
@@ -65,21 +65,21 @@ fn expect(queue: &mut VecDeque<char>, tok: Option<char>)
                     queue.pop_front();
                     Ok(())
                 } else {
-                    Err(format!("Expected '{}' but found '{}'.", val, chr))
+                    Err(ParseError::Expected(Some(val), Some(chr)))
                 }
             },
-            None => Err(format!("Expected end of input but found '{}'.", chr))
+            None => Err(ParseError::Expected(None, Some(chr)))
         }
     } else {
         match tok {
             None => Ok(()),
-            Some(val) => Err(format!("Expected '{}' but input ended.", val)),
+            Some(val) => Err(ParseError::Expected(Some(val), None)),
         }
     }
 }
 
 fn parse_expr(queue: &mut VecDeque<char>, prec: u32)
-    -> Result<Expr, String> {
+    -> Result<Expr, ParseError> {
     Ok(Expr::Literal(0.0))
 }
 
