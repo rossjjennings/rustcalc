@@ -58,24 +58,8 @@ pub fn parse(input: &str) -> Result<Expr, ParseError> {
 
 fn expect(queue: &mut VecDeque<char>, tok: Option<char>)
     -> Result<(), ParseError> {
-    if let Some(&chr) = queue.front() {
-        match tok {
-            Some(val) => {
-                if chr == val {
-                    queue.pop_front();
-                    Ok(())
-                } else {
-                    Err(ParseError::Expected(Some(val), Some(chr)))
-                }
-            },
-            None => Err(ParseError::Expected(None, Some(chr)))
-        }
-    } else {
-        match tok {
-            None => Ok(()),
-            Some(val) => Err(ParseError::Expected(Some(val), None)),
-        }
-    }
+    let front = queue.front().map(|&chr| chr);
+    if tok == front { Ok(()) } else { Err(ParseError::Expected(tok, front)) }
 }
 
 fn parse_expr(queue: &mut VecDeque<char>, prec: u32)
