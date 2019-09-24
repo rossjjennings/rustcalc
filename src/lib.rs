@@ -1,5 +1,6 @@
+use std::fmt;
+use std::num;
 use std::rc::Rc;
-use std::num::ParseFloatError;
 use std::collections::VecDeque;
 
 pub enum Expr {
@@ -54,8 +55,27 @@ pub enum ParseError {
     InvalidFloat,
 }
 
-impl From<ParseFloatError> for ParseError {
-    fn from(_e: ParseFloatError) -> ParseError {
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+        | ParseError::Expected(Some(tok), Some(found)) => {
+            write!(f, "Expected '{}' but fount '{}'.", tok, found)}
+        | ParseError::Expected(Some(tok), None) => {
+            write!(f, "Expected '{}' but input ended.", tok)}
+        | ParseError::Expected(None, Some(found)) => {
+            write!(f, "Expected end of input but found '{}'.", found)}
+        | ParseError::Expected(None, None) => {
+            write!(f, "Expected end of input but found end of input. Eek!")}
+        | ParseError::InvalidAtom => {
+            write!(f, "Invalid atomic expression.")}
+        | ParseError::InvalidFloat => {
+            write!(f, "Invalid floating-point number.")}
+        }
+    }
+}
+
+impl From<num::ParseFloatError> for ParseError {
+    fn from(_e: num::ParseFloatError) -> ParseError {
         ParseError::InvalidFloat
     }
 }
@@ -134,7 +154,7 @@ fn next_unary(queue: &VecDeque<char>) -> Option<Rc<UnaryOp>> {
 }
 
 fn consume_literal(queue: &mut VecDeque<char>)
-    -> Result<Option<f64>, ParseFloatError> {
+    -> Result<Option<f64>, num::ParseFloatError> {
     let mut numchars: Vec<char> = (b'0'..b'9').map(char::from).collect();
     numchars.push('.');
     numchars.push('e');
