@@ -156,7 +156,7 @@ fn next_unary(queue: &VecDeque<char>) -> Option<Rc<UnaryOp>> {
 
 fn consume_literal(queue: &mut VecDeque<char>)
     -> Result<Option<f64>, num::ParseFloatError> {
-    let mut numchars: Vec<char> = (b'0'..b'9').map(char::from).collect();
+    let mut numchars: Vec<char> = (b'0'..b'9'+1u8).map(char::from).collect();
     numchars.push('.');
     numchars.push('e');
     numchars.push('E');
