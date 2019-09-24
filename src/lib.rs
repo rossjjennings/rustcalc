@@ -47,6 +47,7 @@ impl Expr {
     }
 }
 
+#[derive(Debug)]
 pub enum ParseError {
     Expected(Option<char>, Option<char>),
     InvalidAtom,
@@ -187,5 +188,17 @@ mod tests {
     fn parse_invalid() {
         let result = parse("something");
         assert!(result.is_err());
+    }
+    
+    #[test]
+    fn parse_valid() {
+        let result = parse("2+2");
+        assert!(!result.is_err());
+    }
+    
+    #[test]
+    fn evaluate_expr() {
+        let expr = parse("2*3-0.5*2^2-0.25*2^2^2").unwrap();
+        assert_eq!(expr.eval(), 0.0);
     }
 }
