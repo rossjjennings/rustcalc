@@ -136,6 +136,7 @@ fn parse_atom(queue: &mut VecDeque<char>) -> Result<Expr, ParseError> {
         queue.pop_front();
         let arg = parse_expr(queue, 0)?;
         expect(&queue, Some(')'))?;
+        queue.pop_front();
         Ok(arg)
     } else if let Some(x) = consume_literal(queue)? {
         Ok(Expr::Literal(x))
