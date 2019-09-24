@@ -59,7 +59,7 @@ impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
         | ParseError::Expected(Some(tok), Some(found)) => {
-            write!(f, "Expected '{}' but fount '{}'.", tok, found)}
+            write!(f, "Expected '{}' but found '{}'.", tok, found)}
         | ParseError::Expected(Some(tok), None) => {
             write!(f, "Expected '{}' but input ended.", tok)}
         | ParseError::Expected(None, Some(found)) => {
