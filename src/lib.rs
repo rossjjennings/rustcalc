@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::num::ParseFloatError;
 use std::collections::VecDeque;
 
 pub enum Expr {
@@ -20,14 +21,19 @@ impl UnaryOp {
 
 pub struct BinaryOp {
     prec: u32,
-    right_assoc: bool,
+    assoc: Assoc,
     transform: Box<dyn Fn(f64, f64) -> f64>,
 }
 
+pub enum Assoc {
+    Right,
+    Left,
+}
+
 impl BinaryOp {
-    pub fn new(prec: u32, right_assoc: bool,
+    pub fn new(prec: u32, assoc: Assoc,
            transform: Box<dyn Fn(f64, f64) -> f64>) -> BinaryOp {
-        BinaryOp { prec, right_assoc, transform }
+        BinaryOp { prec, assoc, transform }
     }
 }
 
@@ -43,6 +49,14 @@ impl Expr {
 
 pub enum ParseError {
     Expected(Option<char>, Option<char>),
+    InvalidAtom,
+    InvalidFloat,
+}
+
+impl From<ParseFloatError> for ParseError {
+    fn from(_e: ParseFloatError) -> ParseError {
+        ParseError::InvalidFloat
+    }
 }
 
 pub fn parse(input: &str) -> Result<Expr, ParseError> {
@@ -52,11 +66,11 @@ pub fn parse(input: &str) -> Result<Expr, ParseError> {
     }
     
     let expr = parse_expr(&mut queue, 0)?;
-    expect(&mut queue, None)?;
+    expect(&queue, None)?;
     Ok(expr)
 }
 
-fn expect(queue: &mut VecDeque<char>, tok: Option<char>)
+fn expect(queue: &VecDeque<char>, tok: Option<char>)
     -> Result<(), ParseError> {
     let front = queue.front().map(|&chr| chr);
     if tok == front { Ok(()) } else { Err(ParseError::Expected(tok, front)) }
@@ -64,10 +78,82 @@ fn expect(queue: &mut VecDeque<char>, tok: Option<char>)
 
 fn parse_expr(queue: &mut VecDeque<char>, prec: u32)
     -> Result<Expr, ParseError> {
-    Ok(Expr::Literal(0.0))
+    let mut lhs = parse_atom(queue)?;
+    while let Some(b) = next_binary(&queue) {
+        if b.prec < prec { break; }
+        queue.pop_front();
+        let new_prec = match b.assoc {
+            Assoc::Right => b.prec,
+            Assoc::Left => b.prec + 1,
+        };
+        let rhs = parse_expr(queue, new_prec)?;
+        lhs = Expr::Binary(Rc::clone(&b), Box::new(lhs), Box::new(rhs));
+    }
+    Ok(lhs)
 }
 
-//fn parse_atom(queue: &mut VecDeque<char>) -> Result<Expr, &'static str> {}
+fn next_binary(queue: &VecDeque<char>) -> Option<Rc<BinaryOp>> {
+    let b = if let Some(&chr) = queue.front() {
+        match chr {
+        | '+' => Some(BinaryOp::new(1, Assoc::Left, Box::new(|x, y| x + y))),
+        | '-' => Some(BinaryOp::new(1, Assoc::Left, Box::new(|x, y| x - y))),
+        | '*' => Some(BinaryOp::new(2, Assoc::Left, Box::new(|x, y| x * y))),
+        | '/' => Some(BinaryOp::new(2, Assoc::Left, Box::new(|x, y| x / y))),
+        | '^' => Some(BinaryOp::new(3, Assoc::Right, Box::new(|x, y| x.powf(y)))),
+        | _ => None,
+        }
+    } else { None };
+    if let Some(op) = b { Some(Rc::new(op)) } else { None }
+}
+
+fn parse_atom(queue: &mut VecDeque<char>) -> Result<Expr, ParseError> {
+    if let Some(u) = next_unary(&queue) {
+        queue.pop_front();
+        let arg = parse_expr(queue, u.prec)?;
+        Ok(Expr::Unary(Rc::clone(&u), Box::new(arg)))
+    } else if queue.front().map(|&chr| chr) == Some('(') {
+        queue.pop_front();
+        let arg = parse_expr(queue, 0)?;
+        expect(&queue, Some(')'))?;
+        Ok(arg)
+    } else if let Some(x) = consume_literal(queue)? {
+        Ok(Expr::Literal(x))
+    } else {
+        Err(ParseError::InvalidAtom) 
+    }
+}
+
+fn next_unary(queue: &VecDeque<char>) -> Option<Rc<UnaryOp>> {
+    if let Some(&chr) = queue.front() {
+        match chr {
+        | '-' => Some(Rc::new(UnaryOp::new(1, Box::new(|x| -x)))),
+        | _ => None,
+        }
+    } else { None }
+}
+
+fn consume_literal(queue: &mut VecDeque<char>)
+    -> Result<Option<f64>, ParseFloatError> {
+    let mut numchars: Vec<char> = (b'0'..b'9').map(char::from).collect();
+    numchars.push('.');
+    numchars.push('e');
+    numchars.push('E');
+    let mut literal = String::new();
+    
+    while let Some(chr) = queue.front() {
+        let mut is_numeric = false;
+        for d in numchars.iter() {
+            is_numeric |= chr == d; 
+        }
+        if !is_numeric { break; }
+        
+        literal.push(queue.pop_front().unwrap());
+    }
+    
+    if literal.len() == 0 { return Ok(None); }
+    let x: f64 = literal.parse()?;
+    Ok(Some(x))
+}
 
 #[cfg(test)]
 mod tests {
@@ -79,7 +165,7 @@ mod tests {
         let u = UnaryOp::new(1, Box::new(|x| -x));
         let e = Expr::Unary(Rc::new(u), Box::new(e));
         let e2 = Expr::Literal(2.0);
-        let b = BinaryOp::new(1, false, Box::new(|x, y| x + y));
+        let b = BinaryOp::new(1, Assoc::Left, Box::new(|x, y| x + y));
         let e = Expr::Binary(Rc::new(b), Box::new(e), Box::new(e2));
         
         assert_eq!(e.eval(), -2.0);
@@ -90,7 +176,7 @@ mod tests {
         let x = Expr::Literal(1.0);
         let y = Expr::Literal(2.0);
         let z = Expr::Literal(3.0);
-        let plus = Rc::new(BinaryOp::new(1, false, Box::new(|x, y| x + y)));
+        let plus = Rc::new(BinaryOp::new(1, Assoc::Left, Box::new(|x, y| x + y)));
         let e = Expr::Binary(Rc::clone(&plus), Box::new(y), Box::new(z));
         let e = Expr::Binary(Rc::clone(&plus), Box::new(x), Box::new(e));
         
