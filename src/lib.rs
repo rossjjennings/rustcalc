@@ -162,12 +162,21 @@ fn consume_literal(queue: &mut VecDeque<char>)
     numchars.push('E');
     let mut literal = String::new();
     
+    let mut last_was_e = false;
     while let Some(chr) = queue.front() {
         let mut is_numeric = false;
         for d in numchars.iter() {
             is_numeric |= chr == d; 
         }
-        if !is_numeric { break; }
+        if !(is_numeric || (last_was_e && (*chr == '+' || *chr == '-'))) {
+            break;
+        }
+        
+        if *chr == 'e' || *chr == 'E' {
+            last_was_e = true
+        } else {
+            last_was_e = false
+        }
         
         literal.push(queue.pop_front().unwrap());
     }
@@ -221,5 +230,11 @@ mod tests {
     fn evaluate_expr() {
         let expr = parse("2*3-0.5*2^2-0.25*2^2^2").unwrap();
         assert_eq!(expr.eval(), 0.0);
+    }
+    
+    #[test]
+    fn parse_exponential_notation() {
+        let expr = parse("1e8*2.5e-9").unwrap();
+        assert_eq!(expr.eval(), 0.25);
     }
 }
