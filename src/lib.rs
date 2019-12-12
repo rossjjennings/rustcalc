@@ -168,11 +168,11 @@ fn consume_literal(queue: &mut VecDeque<char>)
         for d in numchars.iter() {
             is_numeric |= chr == d; 
         }
-        if !(is_numeric || (last_was_e && (*chr == '+' || *chr == '-'))) {
+        if !(is_numeric || (last_was_e && (chr == &'+' || chr == &'-'))) {
             break;
         }
         
-        if *chr == 'e' || *chr == 'E' {
+        if chr == &'e' || chr == &'E' {
             last_was_e = true
         } else {
             last_was_e = false
