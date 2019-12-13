@@ -12,7 +12,10 @@ fn main() {
     
     let x = rustcalc::parse(arg);
     match x {
-    | Ok(expr) => println!("{}", expr.eval()), 
+    | Ok(expr) => {
+        let mut buffer = ryu::Buffer::new();
+        println!("{}", buffer.format(expr.eval()));
+      }, 
     | Err(e) => println!("Error parsing input: {}", e),
     }
 }
