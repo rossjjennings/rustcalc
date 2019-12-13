@@ -3,4 +3,14 @@
 [[package]]
 name = "rustcalc"
 version = "0.1.0"
+dependencies = [
+ "ryu 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
+[[package]]
+name = "ryu"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum ryu 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "bfa8506c1de11c9c4e4c38863ccbe02a305c8188e85a05a784c9e11e1c3910c8"
